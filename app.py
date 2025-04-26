@@ -1,132 +1,84 @@
 import streamlit as st
+import math
 
-# Judul Aplikasi
-st.title("🍎 Aplikasi Asupan Gizi & Nutrisi Sehat")
+st.set_page_config(page_title="Kalkulator pH & pOH", layout="centered")
 
-st.markdown("""
-Aplikasi ini menghitung kebutuhan kalori harian, makronutrisi (protein, lemak, karbohidrat), memberikan informasi makanan sehat vs tidak sehat, dan tips pencegahan kurang gizi.
+# Title
+st.title("🧪 Kalkulator pH & pOH Larutan")
+
+# Description
+st.write("""
+Aplikasi ini membantu menghitung nilai pH dan pOH larutan berdasarkan input konsentrasi ion [H⁺] atau [OH⁻].
 """)
 
-# Input Data Pengguna
-st.header("🔍 Masukkan Data Pribadimu")
-nama = st.text_input("Nama")
-usia = st.number_input("Usia (tahun)", min_value=1, max_value=100)
-berat = st.number_input("Berat Badan (kg)", min_value=1.0)
-tinggi = st.number_input("Tinggi Badan (cm)", min_value=30.0)
-jenis_kelamin = st.selectbox("Jenis Kelamin", ["Laki-laki", "Perempuan"])
-aktivitas = st.selectbox("Tingkat Aktivitas Fisik", ["Rendah", "Sedang", "Tinggi"])
+# Sidebar for input
+with st.sidebar:
+    st.header("Input Parameter")
+    ion_type = st.radio("Pilih jenis ion yang diketahui:", ("[H⁺]", "[OH⁻]"))
+    concentration = st.number_input(f"Masukkan konsentrasi {ion_type} (mol/L):", min_value=1e-14, max_value=1.0, format="%.2e")
+    show_dark_mode = st.checkbox("Aktifkan Mode Gelap")
 
-# Fungsi menghitung BMR dan kebutuhan kalori
-def hitung_kalori(berat, tinggi, usia, jenis_kelamin, aktivitas):
-    if jenis_kelamin == "Laki-laki":
-        bmr = 66 + (13.7 * berat) + (5 * tinggi) - (6.8 * usia)
+# Apply dark mode
+if show_dark_mode:
+    st.markdown(
+        """
+        <style>
+            body { background-color: #1e1e1e; color: white; }
+            .stApp { background-color: #1e1e1e; }
+        </style>
+        """, unsafe_allow_html=True
+    )
+
+# Divider
+st.markdown("---")
+
+if st.button("Hitung pH dan pOH"):
+    if ion_type == "[H⁺]":
+        pH = -math.log10(concentration)
+        pOH = 14 - pH
     else:
-        bmr = 655 + (9.6 * berat) + (1.8 * tinggi) - (4.7 * usia)
+        pOH = -math.log10(concentration)
+        pH = 14 - pOH
 
-    if aktivitas == "Rendah":
-        kalori = bmr * 1.2
-    elif aktivitas == "Sedang":
-        kalori = bmr * 1.55
+    if pH < 7:
+        sifat = "Asam"
+        sifat_desc = "Asam berarti larutan memiliki ion H⁺ yang lebih banyak daripada OH⁻."
+    elif pH == 7:
+        sifat = "Netral"
+        sifat_desc = "Larutan netral memiliki konsentrasi ion H⁺ dan OH⁻ yang seimbang."
     else:
-        kalori = bmr * 1.9
+        sifat = "Basa"
+        sifat_desc = "Basa berarti larutan memiliki ion OH⁻ yang lebih banyak daripada H⁺."
 
-    return round(kalori)
+    if pH < 4:
+        indikator = "Metil Merah"
+    elif 4 <= pH < 7:
+        indikator = "Bromtimol Biru"
+    elif 7 <= pH < 10:
+        indikator = "Fenolftalein"
+    else:
+        indikator = "Lakmus Biru"
 
-# Fungsi membagi makronutrien dari total kalori
-def hitung_makronutrien(kalori):
-    protein_kal = kalori * 0.15  # 15% protein
-    lemak_kal = kalori * 0.25    # 25% lemak
-    karbo_kal = kalori * 0.60    # 60% karbohidrat
+    st.success(f"pH: {pH:.2f}")
+    st.info(f"pOH: {pOH:.2f}")
+    st.warning(f"Sifat larutan: {sifat}")
+    st.caption(sifat_desc)
+    st.markdown(f"**🔬 Rekomendasi indikator pH:** {indikator}")
 
-    protein_gram = round(protein_kal / 4)  # 1 gram protein = 4 kkal
-    lemak_gram = round(lemak_kal / 9)      # 1 gram lemak = 9 kkal
-    karbo_gram = round(karbo_kal / 4)      # 1 gram karbohidrat = 4 kkal
+    # Visualisasi
+    st.subheader("🌈 Visualisasi Skala pH")
+    colors = ["#ff0000", "#ff4500", "#ffa500", "#ffff00", "#adff2f", "#00ff00",
+              "#00fa9a", "#00ced1", "#1e90ff", "#4169e1", "#0000cd", "#00008b", "#191970", "#4b0082", "#8a2be2"]
 
-    return protein_gram, lemak_gram, karbo_gram
+    st.markdown("<div style='display: flex; flex-direction: row;'>", unsafe_allow_html=True)
+    for i in range(15):
+        highlight = "border: 3px solid black;" if int(round(pH)) == i else ""
+        st.markdown(
+            f"<div style='background-color: {colors[i]}; width: 30px; height: 40px; margin-right: 2px; {highlight}' title='pH {i}'></div>",
+            unsafe_allow_html=True
+        )
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.caption(f"pH kamu di sekitar angka {round(pH)} pada skala warna di atas.")
 
-# Tombol Proses
-if st.button("Hitung Asupan Gizi"):
-    kebutuhan_kalori = hitung_kalori(berat, tinggi, usia, jenis_kelamin, aktivitas)
-    protein, lemak, karbo = hitung_makronutrien(kebutuhan_kalori)
-
-    st.success(f"Halo {nama}, berikut kebutuhan harianmu:")
-    st.write(f"🔥 Kalori: **{kebutuhan_kalori} kkal**")
-    st.write(f"🥩 Protein: **{protein} gram**")
-    st.write(f"🥑 Lemak: **{lemak} gram**")
-    st.write(f"🍚 Karbohidrat: **{karbo} gram**")
-
-    # Tampilkan tips pencegahan
-    st.subheader("🛡️ Tips Pencegahan Kekurangan Nutrisi:")
-    st.markdown("""
-    - Konsumsi makanan beragam (nasi, sayur, buah, lauk-pauk).
-    - Perbanyak protein dari telur, ikan, daging, tahu, tempe.
-    - Makan buah dan sayuran segar setiap hari.
-    - Minum cukup air putih.
-    - Hindari diet ekstrem tanpa pengawasan ahli.
-    - Lakukan pemeriksaan rutin berat badan dan status gizi.
-    """)
-
-# Informasi Makanan Sehat vs Tidak Sehat
-st.header("🥗 Makanan Sehat vs 🍔 Makanan Tidak Sehat")
-
-col1, col2 = st.columns(2)
-
-with col1:
-    st.subheader("✅ Makanan Sehat")
-    st.markdown("""
-    - Sayuran segar (bayam, brokoli, wortel)
-    - Buah segar (apel, pisang, pepaya)
-    - Ikan laut (salmon, sarden)
-    - Telur, ayam tanpa kulit
-    - Kacang-kacangan (kacang almond, kacang tanah)
-    - Karbohidrat kompleks (beras merah, oats)
-    - Air putih minimal 8 gelas sehari
-    """)
-
-with col2:
-    st.subheader("🚫 Makanan Tidak Sehat")
-    st.markdown("""
-    - Gorengan berlebihan
-    - Minuman bersoda & beralkohol
-    - Makanan cepat saji (burger, pizza, fried chicken)
-    - Snack kemasan tinggi gula dan MSG
-    - Mie instan tanpa tambahan sayur dan protein
-    """)
-
-# Rekomendasi Kalori dan Makronutrisi berdasarkan Usia
-st.header("📊 Rekomendasi Umum Kalori & Makronutrien Berdasarkan Usia")
-
-st.markdown("""
-# Update Tabel Rekomendasi Kalori dan Makronutrien Berdasarkan Usia
-st.header("📊 Rekomendasi Kebutuhan Gizi Berdasarkan Usia (PMK No. 28 Tahun 2019)")
-| Kelompok Umur | Energi (kkal) | Protein (g) | Lemak (g) | Karbohidrat (g) |
-|:--------------|:-------------:|:-----------:|:---------:|:---------------:|
-| 1–3 tahun     | 1350          | 20          | 45        | 215             |
-| 4–6 tahun     | 1400          | 25          | 50        | 220             |
-| 7–9 tahun     | 1650          | 40          | 55        | 250             |
-| **Laki-laki** |||||
-| 10–12 tahun   | 2000          | 50          | 65        | 300             |
-| 13–15 tahun   | 2400          | 70          | 80        | 350             |
-| 16–18 tahun   | 2650          | 75          | 85        | 400             |
-| 19–29 tahun   | 2650          | 65          | 75        | 430             |
-| 30–49 tahun   | 2550          | 65          | 70        | 415             |
-| 50–64 tahun   | 2150          | 60          | 60        | 340             |
-| 65–80 tahun   | 1800          | 60          | 50        | 275             |
-| >80 tahun     | 1600          | 64          | 45        | 250             |
-| **Perempuan** |||||
-| 10–12 tahun   | 1900          | 55          | 60        | 280             |
-| 13–15 tahun   | 2050          | 65          | 70        | 300             |
-| 16–18 tahun   | 2100          | 65          | 70        | 300             |
-| 19–29 tahun   | 2250          | 60          | 65        | 360             |
-| 30–49 tahun   | 2150          | 60          | 60        | 340             |
-| 50–64 tahun   | 1800          | 50          | 50        | 280             |
-| 65–80 tahun   | 1550          | 58          | 45        | 230             |
-| >80 tahun     | 1400          | 58          | 40        | 200             |
-
-
-""")
-
-
-# Footer
-st.caption("http://hukor.kemkes.go.id/uploads/produk_hukum/PMK_No__28_Th_2019_ttg_Angka_Kecukupan_Gizi_Yang_Dianjurkan_Untuk_Masyarakat_Indonesia.pdf")
-
+st.markdown("---")
+st.caption("📘 Made with Streamlit for educational purposes.")
